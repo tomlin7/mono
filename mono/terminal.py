@@ -26,6 +26,7 @@ class Terminal(tk.Frame):
     def __init__(self, master, theme=None, cwd=".", standalone=True, *args, **kwargs) -> None:
         super().__init__(master, *args, **kwargs)
         self.__buttons__ = (('add',), ('trash', self.destroy))
+        self.standalone = standalone
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -37,6 +38,12 @@ class Terminal(tk.Frame):
         self.text = TerminalText(self, relief=tk.FLAT, padx=10, pady=10, font=("Consolas", 11))
         self.text.grid(row=0, column=0, sticky=tk.NSEW)
         self.text.bind("<Return>", self.enter)
+
+        if self.standalone:
+            from .styles import Styles
+            from .theme import Theme
+            self.theme = Theme()
+            self.style = Styles(self, self.theme)
 
         self.terminal_scrollbar = Scrollbar(self, style="MonoScrollbar")
         self.terminal_scrollbar.grid(row=0, column=1, sticky='NSW')

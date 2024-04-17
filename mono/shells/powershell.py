@@ -5,14 +5,13 @@ from ..terminal import Terminal
 
 
 class PowerShell(Terminal):
-    """
-    PowerShell - Checks for powershell executable in path and opens that in terminal. 
-    Shows Not Available in case variable is not set.
+    """PowerShell - Looks for powershell executable in path and opens that in terminal. 
+    Shows Not Available in case variable is not set."""
 
-    """
     shell = "powershell"
     name = "PowerShell"
     icon = "powershell"
+    
     def __init__(self, master, *args, **kwargs) -> None:
         super().__init__(master, *args, **kwargs)
 

@@ -46,7 +46,7 @@ class Terminals(tk.Frame):
 
         self.active_terminals = []
 
-    def add_default_terminal(self) -> Default:
+    def add_default_terminal(self, *_) -> Default:
         """Add a default terminal to the list. Create a tab for it.
         
         Returns:
@@ -89,7 +89,7 @@ class Terminals(tk.Frame):
             shell (Terminal): Shell type to open (not instance)
                 use add_terminal() to add existing instance."""
         
-        self.add_terminal(shell(self, cwd=self.cwd or get_home_directory()))
+        self.add_terminal(shell(self, cwd=self.cwd or get_home_directory(), standalone=False))
 
     def open_another_terminal(self, cwd: str=None) -> None:
         """Opens another instance of the active terminal.
@@ -97,9 +97,9 @@ class Terminals(tk.Frame):
         Args:
             cwd (str): Directory path."""
         
-        self.add_terminal(self.active_terminal_type(self, cwd=cwd or self.cwd or get_home_directory()))
+        self.add_terminal(self.active_terminal_type(self, cwd=cwd or self.cwd or get_home_directory(), standalone=False))
 
-    def delete_all_terminals(self) -> None:
+    def delete_all_terminals(self, *_) -> None:
         """Permanently delete all terminal instances."""
 
         for terminal in self.active_terminals:
@@ -118,7 +118,7 @@ class Terminals(tk.Frame):
         terminal.destroy()
         self.active_terminals.remove(terminal)
 
-    def delete_active_terminal(self) -> None:
+    def delete_active_terminal(self, *_) -> None:
         """Permanently delete the active terminal."""
         
         try:
@@ -184,21 +184,26 @@ class Terminals(tk.Frame):
             case _:
                 print("No terminal emulator detected.")
 
-    def open_pwsh(self):
+    def open_pwsh(self, *_):
         """Create a Powershell terminal instance and open it"""
 
-        self.add_terminal(get_shell_from_name("Powershell")(self, cwd=self.cwd or get_home_directory()))
+        self.open_shell(get_shell_from_name("Powershell"))
 
-    def open_cmd(self):
+    def open_cmd(self, *_):
         """Create a Command Prompt terminal instance and open it"""
 
-        self.add_terminal(get_shell_from_name("Command Prompt")(self, cwd=self.cwd or get_home_directory()))
+        self.open_shell(get_shell_from_name("Command Prompt"))
 
-    def open_bash(self):
+    def open_bash(self, *_):
         """Create a Bash terminal instance and open it"""
 
-        self.add_terminal(get_shell_from_name("Bash")(self, cwd=self.cwd or get_home_directory()))
-    
+        self.open_shell(get_shell_from_name("Bash"))
+
+    def open_python(self, *_):
+        """Create a Python terminal instance and open it"""
+
+        self.open_shell(get_shell_from_name("Python"))
+
     @property
     def active_terminal_type(self) -> Terminal:
         """Get the type of the active terminal. If there is no active 
@@ -218,7 +223,7 @@ class Terminals(tk.Frame):
 
         return self.tabs.active_tab.terminal
 
-    def refresh(self) -> None:
+    def refresh(self, *_) -> None:
         """Generates <<Empty>> event that can be bound to hide the terminal 
         if there are no active terminals."""
 

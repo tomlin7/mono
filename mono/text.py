@@ -7,15 +7,10 @@ class TerminalText(tk.Text):
     Limits the editable area to text after the input mark and prevents deletion 
     before the input mark. Also, it keeps a history of previously used commands.
 
-    Attributes
-    ----------
-    proxy_enabled : bool
-        whether the proxy is enabled or not
-    _history : list
-        list of previously used commands
-    _history_level : int
-        current history level
-    """
+    Args:
+        master (tkinter.Tk, optional): The parent widget.
+        proxy_enabled (bool, optional): Whether the proxy is enabled. Defaults to True."""
+    
     def __init__(self, master=None, proxy_enabled: bool=True, **kw) -> None:
         super().__init__(master, **kw)
         self.master = master
@@ -36,7 +31,7 @@ class TerminalText(tk.Text):
         self.tk.createcommand(self._w, self._proxy)
 
     def history_up(self, *_) -> None:
-        "moves up the history"
+        """moves up the history and displays it"""
 
         if not self._history:
             return "break"
@@ -49,7 +44,7 @@ class TerminalText(tk.Text):
         return "break"
 
     def history_down(self, *_) -> None:
-        "moves down the history"
+        """moves down the history and displays it"""
 
         if not self._history:
             return "break"
@@ -62,7 +57,7 @@ class TerminalText(tk.Text):
         return "break"
 
     def register_history(self, command: str) -> None:
-        "registers a command in the history"
+        """registers a command in the history"""
 
         # don't register empty commands or duplicates
         if command.strip() and (not self._history or command.strip() != self._history[-1]):
@@ -70,7 +65,7 @@ class TerminalText(tk.Text):
         self._history_level = len(self._history)
 
     def clear(self, *_) -> None:
-        "clears all previously used commands and results"
+        """clears the text"""
 
         self.proxy_enabled = False
 
@@ -82,8 +77,7 @@ class TerminalText(tk.Text):
 
     def _proxy(self, *args) -> None:
         """proxy limits the editable area to text after the input mark
-        and prevents deletion before the input mark.
-        """
+        and prevents deletion before the input mark."""
 
         if not self.proxy_enabled:
             return self.tk.call((self._orig,) + args)

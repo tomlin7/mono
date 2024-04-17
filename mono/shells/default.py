@@ -4,11 +4,9 @@ from ..terminal import Terminal
 
 
 class Default(Terminal):
-    """
-    Default Terminal - Checks COMSPEC/SHELL environmental variables set in the host machine
-    and opens that in terminal. Shows Not Detected in case variable is not set.
+    """Default Terminal - Checks COMSPEC/SHELL environmental variables set in the host machine
+    and opens that in terminal. Shows Not Detected in case variable is not set."""
 
-    """
     # get the correct shell command depending on platform
     shell = os.environ.get('COMSPEC') or os.environ.get('SHELL')
     name = icon = os.path.splitext(os.path.basename(shell))[0]

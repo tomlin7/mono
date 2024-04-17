@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "mono"
+version = "0.1.0"
+description = "Embeddable terminal emulator"
+authors = ["Billy <billydevbusiness@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pywinpty = {version = "^2.0.13", platform = "win32"}
+ptyprocess = {version = "^0.7.0", platform = "linux"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

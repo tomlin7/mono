@@ -4,6 +4,8 @@ from mono.theme import Theme
 
 
 class Styles(ttk.Style):
+    """Custom ttk styles for Mono terminal."""
+    
     def __init__(self, master, theme: Theme, *args, **kwargs) -> None:
         super().__init__(master, *args, **kwargs)
         self.master = master

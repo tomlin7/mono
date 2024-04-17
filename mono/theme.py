@@ -5,7 +5,7 @@ class Theme:
     afg = "#CCCCCC"
     border = "#2A2A2A"
 
-    tabbar = (bg, fg)
+    tabbar = bg
     tab = (bg, fg, abg, afg)
     tabs = (bg, fg)
     tab_active = (abg, afg)

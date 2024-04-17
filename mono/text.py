@@ -18,6 +18,8 @@ class TerminalText(tk.Text):
     """
     def __init__(self, master=None, proxy_enabled: bool=True, **kw) -> None:
         super().__init__(master, **kw)
+        self.master = master
+        
         self.mark_set('input', 'insert')
         self.mark_gravity('input', 'left')
 

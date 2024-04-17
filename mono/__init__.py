@@ -19,9 +19,19 @@ def get_home_directory() -> str:
     return '.'
 
 class Terminals(tk.Frame):
-    def __init__(self, master, cwd: str=None, *args, **kwargs) -> None:
+    """Mono's tabbed terminal manager
+    
+    Args:
+        master (tk.Tk): Main window.
+        cwd (str): Working directory.
+        theme (Theme): Custom theme instance."""
+    
+    def __init__(self, master, cwd: str=None, theme: Theme=None, *args, **kwargs) -> None:
         super().__init__(master, *args, **kwargs)
-        self.theme = Theme()
+        self.master = master
+        self.base = self
+
+        self.theme = theme or Theme()
         self.styles = Styles(self, self.theme)
 
         self.config(bg=self.theme.border)
@@ -37,6 +47,11 @@ class Terminals(tk.Frame):
         self.active_terminals = []
 
     def add_default_terminal(self) -> Default:
+        """Add a default terminal to the list. Create a tab for it.
+        
+        Returns:
+            Default: Default terminal instance."""
+        
         default_terminal = Default(self, cwd=self.cwd or get_home_directory(), standalone=False)
         self.add_terminal(default_terminal)
         return default_terminal
@@ -133,10 +148,18 @@ class Terminals(tk.Frame):
                 break
 
     def clear_terminal(self, *_) -> None:
+        """Clear text in the active terminal."""
+
         if active := self.active_terminal:
             active.clear()
         
     def run_command(self, command: str) -> None:
+        """Run a command in the active terminal. If there is no active terminal,
+        create a default terminal and run the command.
+        
+        Args:
+            command (str): Command to run."""
+
         if not self.active_terminal:
             default = self.add_default_terminal()
             default.run_command(command)
@@ -144,8 +167,12 @@ class Terminals(tk.Frame):
         else:
             self.active_terminal.run_command(command)
     
+    @staticmethod
     def run_in_external_console(self, command: str) -> None:
-        "Run a command in external console."
+        """Run a command in an external console.
+        
+        Args:
+            command (str): Command to run."""
 
         match platform.system():
             case 'Windows':
@@ -158,16 +185,25 @@ class Terminals(tk.Frame):
                 print("No terminal emulator detected.")
 
     def open_pwsh(self):
+        """Create a Powershell terminal instance and open it"""
+
         self.add_terminal(get_shell_from_name("Powershell")(self, cwd=self.cwd or get_home_directory()))
 
     def open_cmd(self):
+        """Create a Command Prompt terminal instance and open it"""
+
         self.add_terminal(get_shell_from_name("Command Prompt")(self, cwd=self.cwd or get_home_directory()))
 
     def open_bash(self):
+        """Create a Bash terminal instance and open it"""
+
         self.add_terminal(get_shell_from_name("Bash")(self, cwd=self.cwd or get_home_directory()))
     
     @property
-    def active_terminal_type(self):
+    def active_terminal_type(self) -> Terminal:
+        """Get the type of the active terminal. If there is no active 
+        terminal, return Default type."""
+
         if active := self.active_terminal:
             return type(active)
 
@@ -175,7 +211,8 @@ class Terminals(tk.Frame):
 
     @property
     def active_terminal(self) -> Terminal:
-        "Get active terminal."
+        """Get the active terminal instance."""
+
         if not self.tabs.active_tab:
             return
 

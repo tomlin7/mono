@@ -7,9 +7,10 @@ class Tabs(tk.Frame):
     def __init__(self, master, width=170, *args, **kwargs) -> None:
         super().__init__(master, width=width, *args, **kwargs)
         self.master = master
+        self.base = master.base
 
         self.pack_propagate(False)
-        self.config(bg=master.theme.tabbar[0])
+        self.config(bg=self.base.theme.tabbar)
 
         self.tabs = []
         self.active_tab = None

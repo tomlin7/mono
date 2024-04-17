@@ -9,17 +9,20 @@ ICONS = {
 class Tab(tk.Frame):
     def __init__(self, master, terminal, *args, **kwargs) -> None:
         super().__init__(master, *args, **kwargs)
+        self.master = master
+        self.base = master.base
+
         self.terminal = terminal
         self.selected = False
 
-        self.bg, self.fg, self.hbg, self.hfg = self.master.master.theme.tab
+        self.bg, self.fg, self.hbg, self.hfg = self.base.theme.tab
         self.config(bg=self.bg)
 
         self.name_label = tk.Label(self, text=terminal.name  or terminal.__class__.__name__, padx=5, 
                              font=('Segoe UI', 11), anchor=tk.W, bg=self.bg, fg=self.fg)
         self.name_label.pack(side=tk.LEFT, expand=True, fill=tk.X)
 
-        self.closebtn = tk.Label(self, text='x', bg=self.master.master.theme.tab[0])
+        self.closebtn = tk.Label(self, text='x', bg=self.base.theme.tab[0])
         self.closebtn.bind("<Button-1>", self.close)
         self.closebtn.pack(padx=5)
 

@@ -14,7 +14,8 @@ class Default(Terminal):
     def __init__(self, master, *args, **kwargs) -> None:
         super().__init__(master, *args, **kwargs)
 
-        if not self.shell:
+        self.available = self.check_shell()
+        if not (self.shell and self.available):
             tk.Label(self, text="No shells detected for the host os, report an issue otherwise.").grid()
             self.name = "Not Detected"
             self.icon = "error"

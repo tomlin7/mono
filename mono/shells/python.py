@@ -13,7 +13,8 @@ class Python(Terminal):
     def __init__(self, master, *args, **kwargs) -> None:
         super().__init__(master, *args, **kwargs)
 
-        if not self.shell:
+        self.available = self.check_shell()
+        if not self.available:
             tk.Label(self, text="Python not available, report an issue otherwise.").grid()
             self.name = "Not Available"
             self.icon = "error"

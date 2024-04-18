@@ -66,6 +66,13 @@ class Terminal(ttk.Frame):
 
         self.bind("<Destroy>", self.stop_service)
     
+    def check_shell(self):
+        """Check if the shell is available in the system path."""
+        
+        import shutil
+        self.shell = shutil.which(self.shell)
+        return self.shell
+    
     def start_service(self, *_) -> None:
         """Start the terminal service."""
 

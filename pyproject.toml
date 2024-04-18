@@ -12,6 +12,9 @@ pywinpty = {version = "^2.0.13", platform = "win32"}
 ptyprocess = {version = "^0.7.0", platform = "linux"}
 
 
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

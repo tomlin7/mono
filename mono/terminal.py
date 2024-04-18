@@ -1,4 +1,5 @@
 import os
+import re
 import tkinter as tk
 from threading import Thread
 from tkinter import ttk
@@ -8,10 +9,10 @@ if os.name == 'nt':
 else:
     from ptyprocess import PtyProcessUnicode as PTY
 
+from mono.ansi import OutputParser
 from mono.theme import Theme
 from mono.utils import Scrollbar
 
-from .ansi import replace_newline, strip_ansi_escape_sequences
 from .text import TerminalText
 
 
@@ -55,6 +56,8 @@ class Terminal(ttk.Frame):
         self.text.grid(row=0, column=0, sticky=tk.NSEW)
         self.text.bind("<Return>", self.enter)
 
+        self.parser = OutputParser(self)
+
         self.terminal_scrollbar = Scrollbar(self, style="MonoScrollbar")
         self.terminal_scrollbar.grid(row=0, column=1, sticky='NSW')
 
@@ -94,6 +97,11 @@ class Terminal(ttk.Frame):
         self.text.insert("end", command, "command")
         self.enter()
 
+    def clear(self) -> None:
+        """Clear the terminal."""
+        
+        self.text.clear()
+
     def enter(self, *_) -> None:
         """Enter key event handler for running commands."""
 
@@ -109,12 +117,7 @@ class Terminal(ttk.Frame):
     def _write_loop(self) -> None:
         while self.alive:
             if buf := self.p.read():
-                p = buf.find('\x1b]0;')
-                
-                if p != -1:
-                    buf = buf[:p]
-                buf = [strip_ansi_escape_sequences(i) for i in replace_newline(buf).splitlines()]
-                self._insert('\n'.join(buf))
+                self._insert('\n'.join(self.parser.parse(buf)))
 
     def _insert(self, output: str, tag='') -> None:
         self.text.insert(tk.END, output, tag)
@@ -124,11 +127,6 @@ class Terminal(ttk.Frame):
     
     def _newline(self):
         self._insert('\n')
-
-    def clear(self) -> None:
-        """Clear the terminal."""
-        
-        self.text.clear()
 
     # TODO: Implement a better way to handle key events.
     def _ctrl_key(self, key: str) -> None:

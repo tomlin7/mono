@@ -31,6 +31,20 @@ class TerminalText(tk.Text):
         self.tk.call("rename", self._w, self._orig)
         self.tk.createcommand(self._w, self._proxy)
 
+    def _reset_input(self):
+        self.mark_set("input", "insert")
+
+    def flush_insert(self, output: str, tag="") -> None:
+        self.insert(tk.END, output, tag)
+        # self.terminal.tag_add("prompt", "insert linestart", "insert")
+        self.see(tk.END)
+        self._reset_input()
+
+    def flush_delete(self, start: str, end: str) -> None:
+        self.delete(start, end)
+        self.see(tk.END)
+        self._reset_input()
+
     def history_up(self, *_) -> None:
         """moves up the history and displays it"""
 
@@ -76,6 +90,18 @@ class TerminalText(tk.Text):
         self.delete("1.0", "end")
         self.insert("end", lastline)
 
+        self.proxy_enabled = True
+
+    def _reset_input(self) -> None:
+        """resets the input mark"""
+
+        self.mark_set("input", "insert")
+
+    def do(self, command, *args, **kwargs) -> None:
+        """performs the action"""
+
+        self.proxy_enabled = False
+        command(*args, **kwargs)
         self.proxy_enabled = True
 
     def _proxy(self, *args) -> None:

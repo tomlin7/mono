@@ -7,3 +7,6 @@ Mono: Embeddable Terminal Emulator
 * Comes as a standalone terminal widget & a **tabbed widget** as well, for handling different terminal instances.
 * **Custom shells** can be added; terminals can be set to be launched from any directory.
 * Themes are customizable by user.
+
+> [!IMPORTANT]
+> See [PR #4](https://github.com/tomlin7/mono/pull/4) on new output parser under development

@@ -9,7 +9,8 @@ import tkinter as tk
 from mono import Terminals, Theme
 
 root = tk.Tk()
-root.geometry('800x300')
+root.geometry("800x300")
+
 
 class Light(Theme):
     bg = "#FFFFFF"
@@ -24,9 +25,11 @@ class Light(Theme):
     #        super().__init__(master, **kwargs)
     #        self.tabs = (self.bg, 'red')
 
-terminals = Terminals(root, theme=Light())
-terminals.pack(fill='both', expand=True)
 
-terminals.add_default_terminal()
+terminals = Terminals(root, theme=Light())
+terminals.pack(fill="both", expand=True)
+
+terminals.open_python()
+terminals.open_another_terminal()
 
 root.mainloop()

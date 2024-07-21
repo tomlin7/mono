@@ -1,5 +1,5 @@
 __version__ = "0.35.0"
-__version_info__ = tuple(map(int, __version__.split('.')))
+__version_info__ = tuple(map(int, __version__.split(".")))
 
 import os
 import platform
@@ -15,21 +15,28 @@ from .terminal import Terminal
 
 
 def get_home_directory() -> str:
-    if os.name == 'nt':
+    if os.name == "nt":
         return os.path.expandvars("%USERPROFILE%")
-    if os.name == 'posix':
+    if os.name == "posix":
         return os.path.expanduser("~")
-    return '.'
+    return "."
+
 
 class Terminals(tk.Frame):
     """Mono's tabbed terminal manager
-    
+
+    This widget is a container for multiple terminal instances. It provides
+    methods to create, delete, and manage terminal instances. It also provides
+    methods to run commands in the active terminal and switch between terminals.
+
     Args:
         master (tk.Tk): Main window.
         cwd (str): Working directory.
         theme (Theme): Custom theme instance."""
-    
-    def __init__(self, master, cwd: str=None, theme: Theme=None, *args, **kwargs) -> None:
+
+    def __init__(
+        self, master, cwd: str = None, theme: Theme = None, *args, **kwargs
+    ) -> None:
         super().__init__(master, *args, **kwargs)
         self.master = master
         self.base = self
@@ -51,11 +58,13 @@ class Terminals(tk.Frame):
 
     def add_default_terminal(self, *_) -> Default:
         """Add a default terminal to the list. Create a tab for it.
-        
+
         Returns:
             Default: Default terminal instance."""
-        
-        default_terminal = Default(self, cwd=self.cwd or get_home_directory(), standalone=False)
+
+        default_terminal = Default(
+            self, cwd=self.cwd or get_home_directory(), standalone=False
+        )
         self.add_terminal(default_terminal)
         return default_terminal
 
@@ -76,13 +85,13 @@ class Terminals(tk.Frame):
 
         self.active_terminals.append(terminal)
         self.tabs.add_tab(terminal)
-    
+
     def set_cwd(self, cwd: str) -> None:
         """Set current working directory for all terminals.
-        
+
         Args:
             cwd (str): Directory path."""
-        
+
         self.cwd = cwd
 
     def open_shell(self, shell: Terminal) -> None:
@@ -91,16 +100,22 @@ class Terminals(tk.Frame):
         Args:
             shell (Terminal): Shell type to open (not instance)
                 use add_terminal() to add existing instance."""
-        
-        self.add_terminal(shell(self, cwd=self.cwd or get_home_directory(), standalone=False))
 
-    def open_another_terminal(self, cwd: str=None) -> None:
+        self.add_terminal(
+            shell(self, cwd=self.cwd or get_home_directory(), standalone=False)
+        )
+
+    def open_another_terminal(self, cwd: str = None) -> None:
         """Opens another instance of the active terminal.
-        
+
         Args:
             cwd (str): Directory path."""
-        
-        self.add_terminal(self.active_terminal_type(self, cwd=cwd or self.cwd or get_home_directory(), standalone=False))
+
+        self.add_terminal(
+            self.active_terminal_type(
+                self, cwd=cwd or self.cwd or get_home_directory(), standalone=False
+            )
+        )
 
     def delete_all_terminals(self, *_) -> None:
         """Permanently delete all terminal instances."""
@@ -114,7 +129,7 @@ class Terminals(tk.Frame):
 
     def delete_terminal(self, terminal: Terminal) -> None:
         """Permanently delete a terminal instance.
-        
+
         Args:
             terminal (Terminal): Terminal instance to delete."""
 
@@ -123,7 +138,7 @@ class Terminals(tk.Frame):
 
     def delete_active_terminal(self, *_) -> None:
         """Permanently delete the active terminal."""
-        
+
         try:
             self.tabs.close_active_tab()
         except IndexError:
@@ -131,17 +146,17 @@ class Terminals(tk.Frame):
 
     def set_active_terminal(self, terminal: Terminal) -> None:
         """Switch tabs to the terminal.
-        
+
         Args:
             terminal (Terminal): Terminal instance to switch to."""
 
         for tab in self.tabs.tabs:
             if tab.terminal == terminal:
                 self.tabs.set_active_tab(tab)
-    
+
     def set_active_terminal_by_name(self, name: str) -> None:
         """Switch tabs to the terminal by name.
-        
+
         Args:
             name (str): Name of the terminal to switch to."""
 
@@ -155,11 +170,11 @@ class Terminals(tk.Frame):
 
         if active := self.active_terminal:
             active.clear()
-        
+
     def run_command(self, command: str) -> None:
         """Run a command in the active terminal. If there is no active terminal,
         create a default terminal and run the command.
-        
+
         Args:
             command (str): Command to run."""
 
@@ -169,21 +184,21 @@ class Terminals(tk.Frame):
             # this won't work, TODO: implement a queue for commands
         else:
             self.active_terminal.run_command(command)
-    
+
     @staticmethod
     def run_in_external_console(self, command: str) -> None:
         """Run a command in an external console.
-        
+
         Args:
             command (str): Command to run."""
 
         match platform.system():
-            case 'Windows':
-                subprocess.Popen(['start', 'cmd', '/K', command], shell=True)
-            case 'Linux':
-                subprocess.Popen(['x-terminal-emulator', '-e', command])
-            case 'Darwin':
-                subprocess.Popen(['open', '-a', 'Terminal', command])
+            case "Windows":
+                subprocess.Popen(["start", "cmd", "/K", command], shell=True)
+            case "Linux":
+                subprocess.Popen(["x-terminal-emulator", "-e", command])
+            case "Darwin":
+                subprocess.Popen(["open", "-a", "Terminal", command])
             case _:
                 print("No terminal emulator detected.")
 
@@ -209,7 +224,7 @@ class Terminals(tk.Frame):
 
     @property
     def active_terminal_type(self) -> Terminal:
-        """Get the type of the active terminal. If there is no active 
+        """Get the type of the active terminal. If there is no active
         terminal, return Default type."""
 
         if active := self.active_terminal:
@@ -227,7 +242,7 @@ class Terminals(tk.Frame):
         return self.tabs.active_tab.terminal
 
     def refresh(self, *_) -> None:
-        """Generates <<Empty>> event that can be bound to hide the terminal 
+        """Generates <<Empty>> event that can be bound to hide the terminal
         if there are no active terminals."""
 
         if not self.active_terminals:

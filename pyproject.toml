@@ -1,19 +1,17 @@
 [tool.poetry]
-name = "mono"
-version = "0.35.0"
+name = "mono-term"
+version = "0.36.0"
 description = "Embeddable terminal emulator"
 authors = ["Billy <billydevbusiness@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
-packages = [
-    { include = "mono" }
-]
+packages = [{ include = "mono" }]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pywinpty = {version = "^2.0.13", platform = "win32"}
-ptyprocess = {version = "^0.7.0", platform = "linux"}
+pywinpty = { version = "^2.0.13", platform = "win32" }
+ptyprocess = { version = "^0.7.0", platform = "linux" }
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"

@@ -1,21 +1,22 @@
 import os
+import shutil
 import tkinter as tk
 from threading import Thread
-from tkinter import ttk
+from typing import List
 
 if os.name == "nt":
     from winpty import PtyProcess as PTY
 else:
     from ptyprocess import PtyProcessUnicode as PTY
 
+from mono.parser import OutputParser
 from mono.theme import Theme
 from mono.utils import Scrollbar
 
-from .ansi import replace_newline, strip_ansi_escape_sequences
 from .text import TerminalText
 
 
-class Terminal(ttk.Frame):
+class Terminal(tk.Frame):
     """Terminal abstract class. All shell types should inherit from this class.
 
     The inherited class should implement following attributes:
@@ -65,6 +66,8 @@ class Terminal(ttk.Frame):
         self.text.grid(row=0, column=0, sticky=tk.NSEW)
         self.text.bind("<Return>", self.enter)
 
+        self.parser = OutputParser(self)
+
         self.terminal_scrollbar = Scrollbar(self, style="MonoScrollbar")
         self.terminal_scrollbar.grid(row=0, column=1, sticky="NSW")
 
@@ -87,6 +90,7 @@ class Terminal(ttk.Frame):
     def start_service(self, *_) -> None:
         """Start the terminal service."""
 
+    def start_service(self, *_) -> None:
         self.alive = True
         self.last_command = None
 
@@ -94,16 +98,18 @@ class Terminal(ttk.Frame):
         Thread(target=self._write_loop, daemon=True).start()
 
     def stop_service(self, *_) -> None:
-        """Stop the terminal service."""
-
         self.alive = False
 
     def run_command(self, command: str) -> None:
-        """Run a command in the terminal.
-        TODO: Implement a queue for running multiple commands."""
+        # TODO: Implement a queue for running multiple commands.
 
         self.text.insert("end", command, "command")
         self.enter()
+
+    def clear(self) -> None:
+        """Clear the terminal."""
+
+        self.text.clear()
 
     def enter(self, *_) -> None:
         """Enter key event handler for running commands."""

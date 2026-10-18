@@ -9,10 +9,16 @@ if os.name == "nt":
 else:
     from ptyprocess import PtyProcessUnicode as PTY
 
+from mono.queue import TerminalCommandQueue
 from mono.theme import Theme
 from mono.utils import Scrollbar
 
-from .ansi import clean_ansi, replace_newline, strip_ansi_escape_sequences
+from .ansi import (
+    clean_ansi,
+    parse_ansi_styled,
+    replace_newline,
+    strip_ansi_escape_sequences,
+)
 from .text import TerminalText
 
 
@@ -43,6 +49,7 @@ class Terminal(ttk.Frame):
         self.cwd = cwd
         self.p = None
         self._output_queue = queue.Queue()
+        self.command_queue = TerminalCommandQueue(self._execute_command)
 
         if self.standalone:
             self.base = self
@@ -66,6 +73,7 @@ class Terminal(ttk.Frame):
         )
         self.text.grid(row=0, column=0, sticky=tk.NSEW)
         self.text.bind("<Return>", self.enter)
+        self.text.bind("<Control-c>", lambda e: self._ctrl_c())
 
         self.terminal_scrollbar = Scrollbar(self, style="MonoScrollbar")
         self.terminal_scrollbar.grid(row=0, column=1, sticky="NSW")
@@ -73,11 +81,61 @@ class Terminal(ttk.Frame):
         self.text.config(yscrollcommand=self.terminal_scrollbar.set)
         self.terminal_scrollbar.config(command=self.text.yview, orient=tk.VERTICAL)
 
-        self.text.tag_config("prompt", foreground="orange")
-        self.text.tag_config("command", foreground="yellow")
+        self._init_tags()
 
         self.bind("<Destroy>", self.stop_service)
         self.after(20, self._process_queue)
+
+    def _init_tags(self) -> None:
+        """Configures font styling and standard 16-color ANSI tags."""
+        self.text.tag_config("prompt", foreground="orange")
+        self.text.tag_config("command", foreground="yellow")
+        self.text.tag_config("bold", font=("Consolas", 11, "bold"))
+        self.text.tag_config("underline", underline=True)
+
+        # Standard foreground colors
+        fg_map = {
+            "fg_black": "#000000",
+            "fg_red": "#cd3131",
+            "fg_green": "#0dbc79",
+            "fg_yellow": "#e5e510",
+            "fg_blue": "#2472c8",
+            "fg_magenta": "#bc3fbc",
+            "fg_cyan": "#11a8cd",
+            "fg_white": "#e5e5e5",
+            "fg_bright_black": "#666666",
+            "fg_bright_red": "#f14c4c",
+            "fg_bright_green": "#23d18b",
+            "fg_bright_yellow": "#f5f543",
+            "fg_bright_blue": "#3b8eea",
+            "fg_bright_magenta": "#d670d6",
+            "fg_bright_cyan": "#29b8db",
+            "fg_bright_white": "#ffffff",
+        }
+        for tag, color in fg_map.items():
+            self.text.tag_config(tag, foreground=color)
+
+        # Background colors
+        bg_map = {
+            "bg_black": "#000000",
+            "bg_red": "#cd3131",
+            "bg_green": "#0dbc79",
+            "bg_yellow": "#e5e510",
+            "bg_blue": "#2472c8",
+            "bg_magenta": "#bc3fbc",
+            "bg_cyan": "#11a8cd",
+            "bg_white": "#e5e5e5",
+            "bg_bright_black": "#666666",
+            "bg_bright_red": "#f14c4c",
+            "bg_bright_green": "#23d18b",
+            "bg_bright_yellow": "#f5f543",
+            "bg_bright_blue": "#3b8eea",
+            "bg_bright_magenta": "#d670d6",
+            "bg_bright_cyan": "#29b8db",
+            "bg_bright_white": "#ffffff",
+        }
+        for tag, color in bg_map.items():
+            self.text.tag_config(tag, background=color)
 
     def check_shell(self):
         """Check if the shell is available in the system path."""
@@ -103,9 +161,11 @@ class Terminal(ttk.Frame):
         self.alive = False
 
     def run_command(self, command: str) -> None:
-        """Run a command in the terminal.
-        TODO: Implement a queue for running multiple commands."""
+        """Enqueues and runs a command in the terminal."""
+        self.command_queue.put(command)
 
+    def _execute_command(self, command: str) -> None:
+        """Directly writes a command to the terminal."""
         self.text.insert("end", command, "command")
         self.enter()
 
@@ -122,15 +182,28 @@ class Terminal(ttk.Frame):
             self.p.write(command + "\r\n")
         return "break"
 
+    def _ctrl_c(self) -> str:
+        """Handles Ctrl+C interruption."""
+        if self.text.tag_ranges("sel"):
+            # If user has text selected, let standard copy proceed
+            return ""
+
+        if self.p is not None:
+            try:
+                self.p.sendintr()
+            except Exception:
+                self.p.write("\x03")
+        return "break"
+
     def _write_loop(self) -> None:
         while self.alive:
             try:
                 if buf := self.p.read():
-                    should_clear, cleaned = clean_ansi(buf)
+                    should_clear, segments = parse_ansi_styled(buf)
                     if should_clear:
                         self._output_queue.put(("clear", ""))
-                    if cleaned:
-                        self._output_queue.put(("insert", cleaned))
+                    if segments:
+                        self._output_queue.put(("insert_segments", segments))
             except Exception:
                 break
 
@@ -141,15 +214,26 @@ class Terminal(ttk.Frame):
                 action, payload = self._output_queue.get_nowait()
                 if action == "clear":
                     self.clear()
+                elif action == "insert_segments":
+                    self._insert_segments(payload)
                 elif action == "insert":
                     self._insert(payload)
         finally:
             if self.alive or not self._output_queue.empty():
                 self.after(20, self._process_queue)
 
+    def _insert_segments(self, segments: list[tuple[str, tuple[str, ...]]]) -> None:
+        """Inserts styled segments into the text widget."""
+        for text, tags in segments:
+            if tags:
+                self.text.insert(tk.END, text, tags)
+            else:
+                self.text.insert(tk.END, text)
+        self.text.see(tk.END)
+        self.text.mark_set("input", "insert")
+
     def _insert(self, output: str, tag="") -> None:
         self.text.insert(tk.END, output, tag)
-        # self.terminal.tag_add("prompt", "insert linestart", "insert")
         self.text.see(tk.END)
         self.text.mark_set("input", "insert")
 
@@ -161,10 +245,9 @@ class Terminal(ttk.Frame):
 
         self.text.clear()
 
-    # TODO: Implement a better way to handle key events.
     def _ctrl_key(self, key: str) -> None:
         if key == "c":
-            self.run_command("\x03")
+            self._ctrl_c()
 
     def __str__(self) -> str:
         return self.name

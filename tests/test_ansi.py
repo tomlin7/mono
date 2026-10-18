@@ -1,5 +1,10 @@
 import pytest
-from mono.ansi import clean_ansi, replace_newline, strip_ansi_escape_sequences
+from mono.ansi import (
+    clean_ansi,
+    parse_ansi_styled,
+    replace_newline,
+    strip_ansi_escape_sequences,
+)
 
 
 def test_strip_ansi():
@@ -31,3 +36,24 @@ def test_clean_ansi_cursor_col1_to_newline():
 def test_replace_newline():
     raw = "a\x1b[5;1Hb"
     assert replace_newline(raw) == "a\nb"
+
+
+def test_parse_ansi_styled_colors():
+    raw = "Hello \x1b[31mRed\x1b[0m \x1b[1;32mBold Green\x1b[0m World"
+    should_clear, segments = parse_ansi_styled(raw)
+    assert should_clear is False
+
+    assert segments == [
+        ("Hello ", ()),
+        ("Red", ("fg_red",)),
+        (" ", ()),
+        ("Bold Green", ("bold", "fg_green")),
+        (" World", ()),
+    ]
+
+
+def test_parse_ansi_styled_background_and_underline():
+    raw = "\x1b[4;44mUnderline BlueBG\x1b[0m"
+    should_clear, segments = parse_ansi_styled(raw)
+    assert should_clear is False
+    assert segments == [("Underline BlueBG", ("bg_blue", "underline"))]

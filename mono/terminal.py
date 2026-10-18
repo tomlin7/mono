@@ -1,4 +1,5 @@
 import os
+import queue
 import tkinter as tk
 from threading import Thread
 from tkinter import ttk
@@ -11,7 +12,7 @@ else:
 from mono.theme import Theme
 from mono.utils import Scrollbar
 
-from .ansi import replace_newline, strip_ansi_escape_sequences
+from .ansi import clean_ansi, replace_newline, strip_ansi_escape_sequences
 from .text import TerminalText
 
 
@@ -41,6 +42,7 @@ class Terminal(ttk.Frame):
         self.alive = False
         self.cwd = cwd
         self.p = None
+        self._output_queue = queue.Queue()
 
         if self.standalone:
             self.base = self
@@ -75,6 +77,7 @@ class Terminal(ttk.Frame):
         self.text.tag_config("command", foreground="yellow")
 
         self.bind("<Destroy>", self.stop_service)
+        self.after(20, self._process_queue)
 
     def check_shell(self):
         """Check if the shell is available in the system path."""
@@ -90,7 +93,8 @@ class Terminal(ttk.Frame):
         self.alive = True
         self.last_command = None
 
-        self.p = PTY.spawn([self.shell])
+        cmd = self.shell if isinstance(self.shell, list) else [self.shell]
+        self.p = PTY.spawn(cmd, cwd=self.cwd)
         Thread(target=self._write_loop, daemon=True).start()
 
     def stop_service(self, *_) -> None:
@@ -114,21 +118,34 @@ class Terminal(ttk.Frame):
         if command.strip():
             self.text.delete("input", "end")
 
-        self.p.write(command + "\r\n")
+        if self.p is not None:
+            self.p.write(command + "\r\n")
         return "break"
 
     def _write_loop(self) -> None:
         while self.alive:
-            if buf := self.p.read():
-                p = buf.find("\x1b]0;")
+            try:
+                if buf := self.p.read():
+                    should_clear, cleaned = clean_ansi(buf)
+                    if should_clear:
+                        self._output_queue.put(("clear", ""))
+                    if cleaned:
+                        self._output_queue.put(("insert", cleaned))
+            except Exception:
+                break
 
-                if p != -1:
-                    buf = buf[:p]
-                buf = [
-                    strip_ansi_escape_sequences(i)
-                    for i in replace_newline(buf).splitlines()
-                ]
-                self._insert("\n".join(buf))
+    def _process_queue(self) -> None:
+        """Processes pending output chunks in the Tkinter main thread."""
+        try:
+            while not self._output_queue.empty():
+                action, payload = self._output_queue.get_nowait()
+                if action == "clear":
+                    self.clear()
+                elif action == "insert":
+                    self._insert(payload)
+        finally:
+            if self.alive or not self._output_queue.empty():
+                self.after(20, self._process_queue)
 
     def _insert(self, output: str, tag="") -> None:
         self.text.insert(tk.END, output, tag)

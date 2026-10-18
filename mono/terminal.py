@@ -19,6 +19,7 @@ from .ansi import (
     parse_ansi_styled,
     replace_newline,
     strip_ansi_escape_sequences,
+    xterm_to_hex,
 )
 from .text import TerminalText
 
@@ -270,10 +271,41 @@ class Terminal(ttk.Frame):
             if self.alive or not self._output_queue.empty():
                 self.after(20, self._process_queue)
 
+    def _ensure_tag(self, tag: str) -> None:
+        """Ensures dynamic color tags (256-color or 24-bit RGB) are registered on the Text widget."""
+        if tag.startswith("fg_c"):
+            try:
+                c_idx = int(tag[4:])
+                self.text.tag_config(tag, foreground=xterm_to_hex(c_idx))
+            except ValueError:
+                pass
+        elif tag.startswith("bg_c"):
+            try:
+                c_idx = int(tag[4:])
+                self.text.tag_config(tag, background=xterm_to_hex(c_idx))
+            except ValueError:
+                pass
+        elif tag.startswith("fg_rgb_"):
+            try:
+                parts = [int(p) for p in tag[7:].split("_")]
+                if len(parts) == 3:
+                    self.text.tag_config(tag, foreground=f"#{parts[0]:02x}{parts[1]:02x}{parts[2]:02x}")
+            except ValueError:
+                pass
+        elif tag.startswith("bg_rgb_"):
+            try:
+                parts = [int(p) for p in tag[7:].split("_")]
+                if len(parts) == 3:
+                    self.text.tag_config(tag, background=f"#{parts[0]:02x}{parts[1]:02x}{parts[2]:02x}")
+            except ValueError:
+                pass
+
     def _insert_segments(self, segments: list[tuple[str, tuple[str, ...]]]) -> None:
         """Inserts styled segments into the text widget."""
         for text, tags in segments:
             if tags:
+                for tag in tags:
+                    self._ensure_tag(tag)
                 self.text.insert(tk.END, text, tags)
             else:
                 self.text.insert(tk.END, text)

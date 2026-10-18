@@ -4,6 +4,7 @@ from mono.ansi import (
     parse_ansi_styled,
     replace_newline,
     strip_ansi_escape_sequences,
+    xterm_to_hex,
 )
 
 
@@ -57,3 +58,23 @@ def test_parse_ansi_styled_background_and_underline():
     should_clear, segments = parse_ansi_styled(raw)
     assert should_clear is False
     assert segments == [("Underline BlueBG", ("bg_blue", "underline"))]
+
+
+def test_parse_ansi_256_and_truecolor():
+    raw = "\x1b[38;5;196mRed256\x1b[0m \x1b[38;2;255;128;0mOrangeRGB\x1b[0m \x1b[48;5;21mBlueBG\x1b[0m"
+    should_clear, segments = parse_ansi_styled(raw)
+    assert should_clear is False
+    assert segments == [
+        ("Red256", ("fg_c196",)),
+        (" ", ()),
+        ("OrangeRGB", ("fg_rgb_255_128_0",)),
+        (" ", ()),
+        ("BlueBG", ("bg_c21",)),
+    ]
+
+
+def test_xterm_to_hex():
+    assert xterm_to_hex(1) == "#cd3131"
+    assert xterm_to_hex(196) == "#ff0000"
+    assert xterm_to_hex(21) == "#0000ff"
+    assert xterm_to_hex(244) == "#808080"

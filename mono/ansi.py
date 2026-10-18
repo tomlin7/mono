@@ -10,7 +10,7 @@ CSI_NEWLINE = re.compile(r"\x1b\[\d+;1H")
 # ESC ] ... (terminated by BEL (\x07) or ST (\x1b\))
 OSC_SEQ = re.compile(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\|$)")
 
-# Match SGR (Select Graphic Rendition) sequences: e.g. \x1b[31m, \x1b[1;32m
+# Match SGR (Select Graphic Rendition) sequences: e.g. \x1b[31m, \x1b[38;5;196m
 ANSI_SGR = re.compile(r"\x1b\[([0-9;]*)m")
 
 # Match general ANSI escape sequences (CSI, control codes, cursor movements, etc.)
@@ -57,6 +57,42 @@ BG_COLORS = {
 }
 
 
+def xterm_to_hex(n: int) -> str:
+    """Converts xterm 256-color index to hexadecimal color string."""
+    if n < 0:
+        return "#ffffff"
+    if n < 16:
+        standard = [
+            "#000000",
+            "#cd3131",
+            "#0dbc79",
+            "#e5e510",
+            "#2472c8",
+            "#bc3fbc",
+            "#11a8cd",
+            "#e5e5e5",
+            "#666666",
+            "#f14c4c",
+            "#23d18b",
+            "#f5f543",
+            "#3b8eea",
+            "#d670d6",
+            "#29b8db",
+            "#ffffff",
+        ]
+        return standard[n]
+    elif 16 <= n <= 231:
+        n -= 16
+        b = (n % 6) * 51 if (n % 6) else 0
+        g = ((n // 6) % 6) * 51 if ((n // 6) % 6) else 0
+        r = (n // 36) * 51 if (n // 36) else 0
+        return f"#{r:02x}{g:02x}{b:02x}"
+    elif 232 <= n <= 255:
+        gray = 8 + (n - 232) * 10
+        return f"#{gray:02x}{gray:02x}{gray:02x}"
+    return "#ffffff"
+
+
 def clean_ansi(text: str) -> tuple[bool, str]:
     """Cleans terminal escape sequences from PTY output chunk.
 
@@ -82,7 +118,7 @@ def clean_ansi(text: str) -> tuple[bool, str]:
 
 
 def parse_ansi_styled(text: str) -> tuple[bool, list[tuple[str, tuple[str, ...]]]]:
-    """Parses ANSI SGR color and formatting sequences into styled segments.
+    """Parses ANSI SGR color (standard, 256-color, 24-bit truecolor) and formatting into styled segments.
 
     Returns:
         tuple[bool, list[tuple[str, tuple[str, ...]]]]: (should_clear, [(segment, tags), ...])
@@ -112,34 +148,63 @@ def parse_ansi_styled(text: str) -> tuple[bool, list[tuple[str, tuple[str, ...]]
             if content:
                 segments.append((content, tuple(sorted(current_tags))))
 
-        params = match.group(1)
-        if not params or params == "0":
+        params_str = match.group(1)
+        if not params_str or params_str == "0":
             current_tags.clear()
         else:
-            for p in params.split(";"):
-                if not p:
-                    continue
-                try:
-                    code = int(p)
-                except ValueError:
-                    continue
-
+            tokens = [int(p) for p in params_str.split(";") if p.isdigit()]
+            idx = 0
+            while idx < len(tokens):
+                code = tokens[idx]
                 if code == 0:
                     current_tags.clear()
+                    idx += 1
                 elif code == 1:
                     current_tags.add("bold")
+                    idx += 1
                 elif code == 4:
                     current_tags.add("underline")
+                    idx += 1
+                # 38;5;n -> 256-color foreground
+                elif code == 38 and idx + 2 < len(tokens) and tokens[idx + 1] == 5:
+                    color_num = tokens[idx + 2]
+                    current_tags = {t for t in current_tags if not t.startswith("fg_")}
+                    current_tags.add(f"fg_c{color_num}")
+                    idx += 3
+                # 38;2;r;g;b -> 24-bit truecolor foreground
+                elif code == 38 and idx + 4 < len(tokens) and tokens[idx + 1] == 2:
+                    r, g, b = tokens[idx + 2], tokens[idx + 3], tokens[idx + 4]
+                    current_tags = {t for t in current_tags if not t.startswith("fg_")}
+                    current_tags.add(f"fg_rgb_{r}_{g}_{b}")
+                    idx += 5
+                # 48;5;n -> 256-color background
+                elif code == 48 and idx + 2 < len(tokens) and tokens[idx + 1] == 5:
+                    color_num = tokens[idx + 2]
+                    current_tags = {t for t in current_tags if not t.startswith("bg_")}
+                    current_tags.add(f"bg_c{color_num}")
+                    idx += 3
+                # 48;2;r;g;b -> 24-bit truecolor background
+                elif code == 48 and idx + 4 < len(tokens) and tokens[idx + 1] == 2:
+                    r, g, b = tokens[idx + 2], tokens[idx + 3], tokens[idx + 4]
+                    current_tags = {t for t in current_tags if not t.startswith("bg_")}
+                    current_tags.add(f"bg_rgb_{r}_{g}_{b}")
+                    idx += 5
                 elif code in FG_COLORS:
                     current_tags = {t for t in current_tags if not t.startswith("fg_")}
                     current_tags.add(f"fg_{FG_COLORS[code]}")
+                    idx += 1
                 elif code in BG_COLORS:
                     current_tags = {t for t in current_tags if not t.startswith("bg_")}
                     current_tags.add(BG_COLORS[code])
+                    idx += 1
                 elif code == 39:
                     current_tags = {t for t in current_tags if not t.startswith("fg_")}
+                    idx += 1
                 elif code == 49:
                     current_tags = {t for t in current_tags if not t.startswith("bg_")}
+                    idx += 1
+                else:
+                    idx += 1
 
         last_end = end
 

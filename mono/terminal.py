@@ -2,6 +2,7 @@ import os
 import queue
 import tkinter as tk
 from threading import Thread
+from tkinter import font as tkfont
 from tkinter import ttk
 
 if os.name == "nt":
@@ -50,6 +51,8 @@ class Terminal(ttk.Frame):
         self.p = None
         self._output_queue = queue.Queue()
         self.command_queue = TerminalCommandQueue(self._execute_command)
+        self._last_cols = 80
+        self._last_rows = 24
 
         if self.standalone:
             self.base = self
@@ -63,8 +66,9 @@ class Terminal(ttk.Frame):
             self.base = master.base
             self.theme = self.base.theme
 
+        self._font = tkfont.Font(family="Consolas", size=11)
         self.text = TerminalText(
-            self, relief=tk.FLAT, padx=10, pady=10, font=("Consolas", 11)
+            self, relief=tk.FLAT, padx=10, pady=10, font=self._font
         )
         self.text.config(
             bg=self.theme.terminal[0],
@@ -74,6 +78,8 @@ class Terminal(ttk.Frame):
         self.text.grid(row=0, column=0, sticky=tk.NSEW)
         self.text.bind("<Return>", self.enter)
         self.text.bind("<Control-c>", lambda e: self._ctrl_c())
+        self.text.bind("<Control-l>", lambda e: self._ctrl_l())
+        self.text.bind("<Control-u>", lambda e: self._ctrl_u())
 
         self.terminal_scrollbar = Scrollbar(self, style="MonoScrollbar")
         self.terminal_scrollbar.grid(row=0, column=1, sticky="NSW")
@@ -84,6 +90,7 @@ class Terminal(ttk.Frame):
         self._init_tags()
 
         self.bind("<Destroy>", self.stop_service)
+        self.bind("<Configure>", self._on_resize)
         self.after(20, self._process_queue)
 
     def _init_tags(self) -> None:
@@ -156,9 +163,15 @@ class Terminal(ttk.Frame):
         Thread(target=self._write_loop, daemon=True).start()
 
     def stop_service(self, *_) -> None:
-        """Stop the terminal service."""
+        """Stop the terminal service and terminate child PTY process."""
 
         self.alive = False
+        if self.p is not None:
+            try:
+                self.p.close()
+            except Exception:
+                pass
+            self.p = None
 
     def run_command(self, command: str) -> None:
         """Enqueues and runs a command in the terminal."""
@@ -194,6 +207,41 @@ class Terminal(ttk.Frame):
             except Exception:
                 self.p.write("\x03")
         return "break"
+
+    def _ctrl_l(self) -> str:
+        """Handles Ctrl+L to clear the terminal."""
+        self.clear()
+        return "break"
+
+    def _ctrl_u(self) -> str:
+        """Handles Ctrl+U to clear current input line."""
+        self.text.delete("input", "end")
+        return "break"
+
+    def _on_resize(self, event: tk.Event) -> None:
+        """Synchronizes PTY window size when the widget is resized."""
+        if not self.alive or self.p is None:
+            return
+
+        char_w = self._font.measure("M")
+        char_h = self._font.metrics("linespace")
+        if char_w <= 0 or char_h <= 0:
+            return
+
+        # Subtract padding
+        usable_w = max(event.width - 20, char_w)
+        usable_h = max(event.height - 20, char_h)
+
+        cols = max(10, usable_w // char_w)
+        rows = max(4, usable_h // char_h)
+
+        if (cols, rows) != (self._last_cols, self._last_rows):
+            self._last_cols = cols
+            self._last_rows = rows
+            try:
+                self.p.setwinsize(rows, cols)
+            except Exception:
+                pass
 
     def _write_loop(self) -> None:
         while self.alive:
@@ -248,6 +296,10 @@ class Terminal(ttk.Frame):
     def _ctrl_key(self, key: str) -> None:
         if key == "c":
             self._ctrl_c()
+        elif key == "l":
+            self._ctrl_l()
+        elif key == "u":
+            self._ctrl_u()
 
     def __str__(self) -> str:
         return self.name

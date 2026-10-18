@@ -7,3 +7,10 @@ __pycache__/
 # Virtual Environment
 venv/
 env/
+.venv/
+.pytest_cache/
+
+# Web distribution and node modules
+www/node_modules/
+www/dist/
+www/.tmp/

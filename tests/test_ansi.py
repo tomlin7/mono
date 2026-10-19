@@ -34,8 +34,20 @@ def test_clean_ansi_cursor_col1_to_newline():
     assert text == "line1\nline2"
 
 
+def test_clean_ansi_cursor_col1_with_preceding_newline():
+    raw = "line1\r\n\x1b[2;1Hline2"
+    should_clear, text = clean_ansi(raw)
+    assert should_clear is False
+    assert text == "line1\nline2"
+
+
 def test_replace_newline():
     raw = "a\x1b[5;1Hb"
+    assert replace_newline(raw) == "a\nb"
+
+
+def test_replace_newline_with_preceding_newline():
+    raw = "a\r\n\x1b[5;1Hb"
     assert replace_newline(raw) == "a\nb"
 
 

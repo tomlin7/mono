@@ -75,6 +75,7 @@ class TerminalText(tk.Text):
         lastline = self.get("input linestart", "input")
         self.delete("1.0", "end")
         self.insert("end", lastline)
+        self.mark_set("input", "insert")
 
         self.proxy_enabled = True
 

@@ -186,11 +186,12 @@ class Terminal(ttk.Frame):
     def enter(self, *_) -> None:
         """Enter key event handler for running commands."""
 
-        command = self.text.get("input", "end")
+        command = self.text.get("input", "end-1c")
         self.last_command = command
         self.text.register_history(command)
         if command.strip():
-            self.text.delete("input", "end")
+            self.text.delete("input", "end-1c")
+            self.text.tag_add("prompt", "input linestart", "input")
 
         if self.p is not None:
             self.p.write(command + "\r\n")
@@ -216,12 +217,18 @@ class Terminal(ttk.Frame):
 
     def _ctrl_u(self) -> str:
         """Handles Ctrl+U to clear current input line."""
-        self.text.delete("input", "end")
+        self.text.delete("input", "end-1c")
         return "break"
 
     def _on_resize(self, event: tk.Event) -> None:
         """Synchronizes PTY window size when the widget is resized."""
         if not self.alive or self.p is None:
+            return
+
+        if os.name == "nt":
+            # On Windows, winpty's set_size forces a full 2D screen buffer redraw
+            # containing empty trailing rows (\x1b[K\r\n) and cursor homing sequences
+            # that corrupt stream-based scrollback widgets.
             return
 
         char_w = self._font.measure("M")

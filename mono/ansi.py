@@ -4,7 +4,7 @@ import re
 CSI_CLEAR = re.compile(r"\x1b\[[23]J")
 
 # Match cursor newline / positioning at column 1 (e.g. \x1b[24;1H)
-CSI_NEWLINE = re.compile(r"\x1b\[\d+;1H")
+CSI_NEWLINE = re.compile(r"(?:\r\n|\r|\n)?\x1b\[\d+;1H")
 
 # Match Operating System Command sequences:
 # ESC ] ... (terminated by BEL (\x07) or ST (\x1b\))
